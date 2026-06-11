@@ -1,3 +1,7 @@
+import os
+# 【核心修復】強制讓 MediaPipe 在沒有螢幕的雲端 Linux 伺服器中順利執行
+os.environ["XDG_RUNTIME_DIR"] = "/tmp/runtime-root"
+
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import cv2
@@ -43,18 +47,14 @@ def overlay_image(background, overlay, x, y, size=None):
         return background
     
     bg_h, bg_w = background.shape[:2]
-    
     if size is not None:
         overlay = cv2.resize(overlay, size, interpolation=cv2.INTER_AREA)
-    
     h, w = overlay.shape[:2]
-    
     if x >= bg_w or y >= bg_h or x + w <= 0 or y + h <= 0:
         return background
     
     x1, y1 = max(0, x), max(0, y)
     x2, y2 = min(bg_w, x + w), min(bg_h, y + h)
-    
     overlay_x1, overlay_y1 = x1 - x, y1 - y
     overlay_x2, overlay_y2 = overlay_x1 + (x2 - x1), overlay_y1 + (y2 - y1)
     
@@ -68,22 +68,16 @@ def overlay_image(background, overlay, x, y, size=None):
         background[y1:y2, x1:x2] = composite
     else:
         background[y1:y2, x1:x2] = crop_overlay[:, :, :3]
-        
     return background
 
 # --- 視訊處理類別 ---
 class VideoProcessor(VideoProcessorBase):
     def __init__(self):
         self.face_mesh = mp_face_mesh.FaceMesh(
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
+            max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5
         )
         self.hands = mp_hands.Hands(
-            max_num_hands=1,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
+            max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5
         )
         self.current_filter = "無"
         self.processed_frame = None
@@ -98,15 +92,12 @@ class VideoProcessor(VideoProcessorBase):
         
         self.current_filter = "路易十六"
         output_img = img.copy()
-        
         has_face = False
         face_height = 0
         forehead = (0, 0)
         nose_tip = (0, 0)
         chin = (0, 0)
-        lower_lip = (0, 0)
         
-        # --- 1. 優先偵測臉部動作 ---
         if face_results.multi_face_landmarks:
             has_face = True
             face_landmarks = face_results.multi_face_landmarks[0]
@@ -126,19 +117,15 @@ class VideoProcessor(VideoProcessorBase):
             lower_lip = get_pt(14)
             
             face_height = abs(chin[1] - forehead[1])
-            
             eye_open_ratio = (abs(left_eye_top[1] - left_eye_bottom[1]) + abs(right_eye_top[1] - right_eye_bottom[1])) / (2 * face_height)
             mouth_open_ratio = abs(upper_lip[1] - lower_lip[1]) / face_height
             
-            # (a) 釋迦牟尼佛：閉眼
             if eye_open_ratio < 0.015:
                 self.current_filter = "釋迦牟尼佛"
                 if imgs["holy_light"] is not None:
                     light_w = int(w * 0.8)
                     light_h = int(light_w * (imgs["holy_light"].shape[0] / imgs["holy_light"].shape[1]))
                     output_img = overlay_image(output_img, imgs["holy_light"], int(nose_tip[0] - light_w / 2), int(forehead[1] - light_h * 0.9), size=(light_w, light_h))
-            
-            # (b) 愛因斯坦：張開嘴巴
             elif mouth_open_ratio > 0.08:
                 self.current_filter = "愛因斯坦"
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -152,7 +139,6 @@ class VideoProcessor(VideoProcessorBase):
                     tongue_h = int(tongue_w * (imgs["tongue"].shape[0] / imgs["tongue"].shape[1]))
                     output_img = overlay_image(output_img, imgs["tongue"], int(lower_lip[0] - tongue_w / 2), int(lower_lip[1]), size=(tongue_w, tongue_h))
 
-        # --- 2. 判斷手勢 (孔子、秦始皇) ---
         if self.current_filter == "路易十六" and hand_results.multi_hand_landmarks:
             hand_landmarks = hand_results.multi_hand_landmarks[0]
             
@@ -182,7 +168,6 @@ class VideoProcessor(VideoProcessorBase):
                     bear_w = int(w * 0.4)
                     bear_h = int(bear_w * (imgs["bear"].shape[0] / imgs["bear"].shape[1]))
                     output_img = overlay_image(output_img, imgs["bear"], int(w - bear_w - 20), int(h - bear_h - 20), size=(bear_w, bear_h))
-                    
             elif are_fingers_straight and is_palm_facing_self:
                 self.current_filter = "孔子"
                 if has_face:
@@ -199,7 +184,6 @@ class VideoProcessor(VideoProcessorBase):
                     sleeve_h = int(sleeve_w * (imgs["sleeve"].shape[0] / imgs["sleeve"].shape[1]))
                     output_img = overlay_image(output_img, imgs["sleeve"], int(wrist[0] - sleeve_w / 2), int(wrist[1] - sleeve_h / 2), size=(sleeve_w, sleeve_h))
 
-        # --- 3. 預設：路易十六 ---
         if self.current_filter == "路易十六" and has_face:
             if imgs["tomato"] is not None:
                 tomato_w = int(face_height * 1.4)
