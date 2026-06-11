@@ -1,9 +1,12 @@
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import cv2
-import mediapipe as mp
 import numpy as np
 import time
+
+# --- 修正後的 MediaPipe 導入方式 (避開 mp.solutions 的 Bug) ---
+import mediapipe.python.solutions.face_mesh as mp_face_mesh
+import mediapipe.python.solutions.hands as mp_hands
 
 # --- 設定 ---
 st.set_page_config(page_title="AI 智慧修圖相機", page_icon="📸")
@@ -71,10 +74,6 @@ def overlay_image(background, overlay, x, y, size=None):
         background[y1:y2, x1:x2] = crop_overlay[:, :, :3]
         
     return background
-
-# --- MediaPipe 初始化 (修正版：相容 Streamlit 新環境) ---
-mp_face_mesh = mp.solutions.mediapipe.python.solutions.face_mesh
-mp_hands = mp.solutions.mediapipe.python.solutions.hands
 
 # --- 視訊處理類別 ---
 class VideoProcessor(VideoProcessorBase):
