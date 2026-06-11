@@ -5,13 +5,12 @@ os.environ["XDG_RUNTIME_DIR"] = "/tmp/runtime-root"
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import cv2
-import mediapipe as mp
 import numpy as np
 import time
 
-# --- 經典相容的 MediaPipe 初始化 ---
-mp_face_mesh = mp.solutions.face_mesh
-mp_hands = mp.solutions.hands
+# --- 終極相容：直接導入實體類別，徹底繞過 .solutions 錯誤 ---
+from mediapipe.python.solutions.face_mesh import FaceMesh
+from mediapipe.python.solutions.hands import Hands
 
 # --- 設定 ---
 st.set_page_config(page_title="AI 智慧修圖相機", page_icon="📸")
@@ -73,10 +72,12 @@ def overlay_image(background, overlay, x, y, size=None):
 # --- 視訊處理類別 ---
 class VideoProcessor(VideoProcessorBase):
     def __init__(self):
-        self.face_mesh = mp_face_mesh.FaceMesh(
+        # 這裡已修正：直接呼叫 FaceMesh 類別
+        self.face_mesh = FaceMesh(
             max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5
         )
-        self.hands = mp_hands.Hands(
+        # 這裡已修正：直接呼叫 Hands 類別
+        self.hands = Hands(
             max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5
         )
         self.current_filter = "無"
