@@ -5,13 +5,14 @@ os.environ["XDG_RUNTIME_DIR"] = "/tmp/runtime-root"
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
 import cv2
+
 import mediapipe as mp
 import numpy as np
 import time
 
-# --- 標準 MediaPipe 初始化 ---
-mp_face_mesh = mp.solutions.face_mesh
-mp_hands = mp.solutions.hands
+# --- 新版 MediaPipe 導入方式 ---
+import mediapipe.python.solutions.face_mesh as mp_face_mesh
+import mediapipe.python.solutions.hands as mp_hands
 
 # --- 設定 ---
 st.set_page_config(page_title="AI 智慧修圖相機", page_icon="📸")
