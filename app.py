@@ -8,33 +8,10 @@ import cv2
 import numpy as np
 import mediapipe as mp
 
-# --- 終極動態自適應導入：徹底解決 AttributeError ---
-def get_mediapipe_class(class_name):
-    # 嘗試路徑 1：經典的 mp.solutions
-    if hasattr(mp, 'solutions'):
-        solutions = mp.solutions
-        if hasattr(solutions, class_name.lower()):
-            module = getattr(solutions, class_name.lower())
-            if hasattr(module, class_name):
-                return getattr(module, class_name)
-    
-    # 嘗試路徑 2：新版隱藏的 python 子模組路徑
-    try:
-        import importlib
-        mod = importlib.import_module(f"mediapipe.python.solutions.{class_name.lower()}")
-        return getattr(mod, class_name)
-    except Exception:
-        pass
-
-    # 嘗試路徑 3：直接從頂層獲取
-    try:
-        return getattr(mp, class_name)
-    except Exception:
-        raise ImportError(f"無法在當前 MediaPipe 版本中找到 {class_name} 類別。")
-
-# 動態獲取 FaceMesh 和 Hands 類別
-FaceMesh = get_mediapipe_class("FaceMesh")
-Hands = get_mediapipe_class("Hands")
+# --- 官方標準多媒體處理解決方案導入 ---
+mp_solutions = mp.solutions
+FaceMesh = mp_solutions.face_mesh.FaceMesh
+Hands = mp_solutions.hands.Hands
 
 # --- 設定 ---
 st.title("像個偉(偽)人一樣 📸")
@@ -76,7 +53,7 @@ def overlay_image(background, overlay, x, y, size=None):
 
 class VideoProcessor:
     def __init__(self):
-        # 使用剛剛動態獲取的類別初始化
+        # 使用官方路徑初始化
         self.face_mesh = FaceMesh(max_num_faces=1, refine_landmarks=False, min_detection_confidence=0.5)
         self.hands = Hands(max_num_hands=1, min_detection_confidence=0.5)
         self.latest_orig = None
